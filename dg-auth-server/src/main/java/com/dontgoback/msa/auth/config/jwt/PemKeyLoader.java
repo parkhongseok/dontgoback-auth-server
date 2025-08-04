@@ -20,7 +20,6 @@ public class PemKeyLoader {
     private final PrivateKey privateKey;
     private final PublicKey publicKey;
 
-
     public PemKeyLoader(
             @Value("${jwt.private-key-path}") String privateKeyPath,
             @Value("${jwt.public-key-path}") String publicKeyPath

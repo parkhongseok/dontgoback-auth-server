@@ -24,6 +24,7 @@ import static org.mockito.BDDMockito.given;
 @AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
 public class ApiV1PublicKeyControllerTest {
+    private final String END_POINT =  "/msa/auth/api/public-key";
 
     @Autowired
     private MockMvc mockMvc;
@@ -42,7 +43,7 @@ public class ApiV1PublicKeyControllerTest {
         given(pemKeyLoader.getPublicKey()).willReturn(mockPublicKey);
 
         // when & then
-        mockMvc.perform(get("/msa/auth/public-key"))
+        mockMvc.perform(get(END_POINT))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("S"))
                 .andExpect(jsonPath("$.message").value("Success"))
@@ -55,7 +56,7 @@ public class ApiV1PublicKeyControllerTest {
         given(pemKeyLoader.getPublicKey()).willReturn(null);
 
         // when & then
-        mockMvc.perform(get("/msa/auth/public-key"))
+        mockMvc.perform(get(END_POINT))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.resultCode").value("F"))
                 .andExpect(jsonPath("$.message").value("Public key is not initialized"))

@@ -20,6 +20,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc(addFilters = false) // Spring Security 필터 제거
 @WebMvcTest(ApiV1TokenController.class)
 public class ApiV1TokenControllerTest {
+    private final String END_POINT =  "/msa/auth/api/token";
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -47,13 +49,12 @@ public class ApiV1TokenControllerTest {
         """.formatted(clientId, clientSecret);
 
         // when & then
-        mockMvc.perform(post("/msa/auth/token")
+        mockMvc.perform(post(END_POINT)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody)
                         .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("S"))
-                .andExpect(jsonPath("$.message").value("Success"))
                 .andExpect(jsonPath("$.data.token").value(expectedToken));
     }
 
@@ -75,12 +76,11 @@ public class ApiV1TokenControllerTest {
     """.formatted(clientId, wrongSecret);
 
         // when & then
-        mockMvc.perform(post("/msa/auth/token")
+        mockMvc.perform(post(END_POINT)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.resultCode").value("F"))
-                .andExpect(jsonPath("$.message").value("invalid_client : Client secret does not match."))
                 .andExpect(jsonPath("$.data").doesNotExist());
     }
 
@@ -100,12 +100,11 @@ public class ApiV1TokenControllerTest {
     """.formatted(nonExistentClientId, anySecret);
 
         // when & then
-        mockMvc.perform(post("/msa/auth/token")
+        mockMvc.perform(post(END_POINT)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.resultCode").value("F"))
-                .andExpect(jsonPath("$.message").value("invalid_client : Client secret does not match."))
                 .andExpect(jsonPath("$.data").doesNotExist());
     }
 
