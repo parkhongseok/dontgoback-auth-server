@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 @Component
 @ConfigurationProperties(prefix = "auth")
@@ -19,7 +18,7 @@ public class ClientAuthProperties {
         return clients.get(clientId);  // 간단하게 바로 꺼냄
     }
 
-    public boolean exists(String clientId) {
-        return clients.containsKey(clientId);
-    }
+//    public boolean exists(String clientId) {
+//        return clients.containsKey(clientId);
+//    }
 }
