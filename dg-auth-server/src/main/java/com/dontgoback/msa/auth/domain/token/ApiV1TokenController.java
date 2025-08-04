@@ -24,7 +24,7 @@ public class ApiV1TokenController {
     private final ClientAuthProperties clientAuthProperties;
 
     @PostMapping("/token")
-    public ResponseEntity<ResData<TokenResponse>> issueToken(@Valid @RequestBody TokenRequest request) {
+    public ResponseEntity<String> issueToken(@Valid @RequestBody TokenRequest request) {
         String requestedClientId = request.getClientId();
         String requestedSecret = request.getClientSecret();
 
@@ -36,18 +36,11 @@ public class ApiV1TokenController {
             log.warn("Token 요청 실패: clientId={}, 이유=등록되지 않았거나 secret 불일치", requestedClientId);
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
-                    .body(ResData.of("F",
-                                    "invalid_client : Client secret does not match.",
-                                    null));
+                    .body("Unauthorized: invalid_client or secret mismatch");
         }
 
         // subject에는 clientId 또는 client 이름 사용
-        String token = tokenProvider.generateToken(request.getClientId());
-
-        return ResponseEntity.ok(ResData.of(
-                "S",
-                "Success",
-                new TokenResponse(token)
-        ));
+        String token = tokenProvider.generateToken(requestedClientId);
+        return ResponseEntity.ok(token);
     }
 }

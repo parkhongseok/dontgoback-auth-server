@@ -35,8 +35,8 @@ public class SecurityConfig {
 
         http
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/mas/auth/api/token", "/mas/auth/api/public-key").permitAll()
-                        .requestMatchers("/mas/auth/**").denyAll() // 또는 완전 차단
+                        .requestMatchers("/msa/auth/api/token", "/msa/auth/api/public-key").permitAll()
+                        .requestMatchers("/msa/auth/**").denyAll() // 또는 완전 차단
                 );
 
         return http.build();

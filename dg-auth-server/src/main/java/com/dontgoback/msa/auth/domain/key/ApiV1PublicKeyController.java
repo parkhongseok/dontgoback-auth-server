@@ -21,17 +21,14 @@ public class ApiV1PublicKeyController {
     private final PemKeyLoader pemKeyLoader;
 
     @GetMapping("/public-key")
-    public ResponseEntity<ResData<PublicKeyResponse>> getPublicKey(){
+    public ResponseEntity<String> getPublicKey(){
         PublicKey publicKey = pemKeyLoader.getPublicKey();
 
         if (publicKey == null) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ResData.of("F", "Public key is not initialized", null));
+                    .body("Public key is not initialized");
         }
-
         String base64Key = Base64.getEncoder().encodeToString(publicKey.getEncoded());
-        return ResponseEntity.ok(
-                ResData.of("S", "Success", new PublicKeyResponse(base64Key))
-        );
+        return ResponseEntity.ok(base64Key);
     }
 }

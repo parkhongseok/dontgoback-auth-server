@@ -18,7 +18,6 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import static org.mockito.BDDMockito.given;
 
 @WebMvcTest(ApiV1PublicKeyController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -45,9 +44,7 @@ public class ApiV1PublicKeyControllerTest {
         // when & then
         mockMvc.perform(get(END_POINT))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.resultCode").value("S"))
-                .andExpect(jsonPath("$.message").value("Success"))
-                .andExpect(jsonPath("$.data.publicKey").value(encodedKey));
+                .andExpect(content().string(encodedKey));
     }
 
     @Test
@@ -58,8 +55,6 @@ public class ApiV1PublicKeyControllerTest {
         // when & then
         mockMvc.perform(get(END_POINT))
                 .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.resultCode").value("F"))
-                .andExpect(jsonPath("$.message").value("Public key is not initialized"))
-                .andExpect(jsonPath("$.data").doesNotExist());
+                .andExpect(content().string("Public key is not initialized"));
     }
 }

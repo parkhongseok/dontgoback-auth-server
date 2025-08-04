@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultMatcher;
 
 import static org.mockito.BDDMockito.given;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -31,9 +32,26 @@ public class ApiV1TokenControllerTest {
     @MockitoBean
     private ClientAuthProperties clientAuthProperties;
 
+    private String createRequestBody(String clientId, String clientSecret) {
+        return """
+            {
+                "clientId": "%s",
+                "clientSecret": "%s"
+            }
+        """.formatted(clientId, clientSecret);
+    }
+
+    private void performTokenRequest(String clientId, String clientSecret, ResultMatcher expectedStatus, ResultMatcher expectedContent) throws Exception {
+        mockMvc.perform(post(END_POINT)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createRequestBody(clientId, clientSecret))
+                        .with(csrf()))
+                .andExpect(expectedStatus)
+                .andExpect(expectedContent);
+    }
+
     @Test
     void 토큰_정상_발급_요청_성공() throws Exception {
-        // given
         String clientId = "dontgoback-core-server";
         String clientSecret = "test-core-secret";
         String expectedToken = "mocked-jwt-token";
@@ -41,71 +59,42 @@ public class ApiV1TokenControllerTest {
         given(clientAuthProperties.getSecretForClientId(clientId)).willReturn(clientSecret);
         given(tokenProvider.generateToken(clientId)).willReturn(expectedToken);
 
-        String requestBody = """
-            {
-                "clientId": "%s",
-                "clientSecret": "%s"
-            }
-        """.formatted(clientId, clientSecret);
-
-        // when & then
-        mockMvc.perform(post(END_POINT)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody)
-                        .with(csrf()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.resultCode").value("S"))
-                .andExpect(jsonPath("$.data.token").value(expectedToken));
+        performTokenRequest(
+                clientId,
+                clientSecret,
+                status().isOk(),
+                content().string(expectedToken)
+        );
     }
-
 
     @Test
     void 토큰_발급_실패_시크릿_불일치() throws Exception {
-        // given
         String clientId = "dontgoback-core-server";
         String correctSecret = "test-core-secret";
         String wrongSecret = "wrong-secret";
 
         given(clientAuthProperties.getSecretForClientId(clientId)).willReturn(correctSecret);
 
-        String requestBody = """
-        {
-            "clientId": "%s",
-            "clientSecret": "%s"
-        }
-    """.formatted(clientId, wrongSecret);
-
-        // when & then
-        mockMvc.perform(post(END_POINT)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.resultCode").value("F"))
-                .andExpect(jsonPath("$.data").doesNotExist());
+        performTokenRequest(
+                clientId,
+                wrongSecret,
+                status().isUnauthorized(),
+                content().string("invalid_client : Client secret does not match.")
+        );
     }
 
     @Test
     void 토큰_발급_실패_존재하지_않는_클라이언트() throws Exception {
-        // given
-        String nonExistentClientId = "unknown-client";
+        String unknownClientId = "unknown-client";
         String anySecret = "some-secret";
 
-        given(clientAuthProperties.getSecretForClientId(nonExistentClientId)).willReturn(null); // 등록되지 않음
+        given(clientAuthProperties.getSecretForClientId(unknownClientId)).willReturn(null);
 
-        String requestBody = """
-        {
-            "clientId": "%s",
-            "clientSecret": "%s"
-        }
-    """.formatted(nonExistentClientId, anySecret);
-
-        // when & then
-        mockMvc.perform(post(END_POINT)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.resultCode").value("F"))
-                .andExpect(jsonPath("$.data").doesNotExist());
+        performTokenRequest(
+                unknownClientId,
+                anySecret,
+                status().isUnauthorized(),
+                content().string("invalid_client : Client secret does not match.")
+        );
     }
-
 }
