@@ -8,4 +8,3 @@ auth:
     dontgoback-core-server: test-core-secret
     dontgoback-extension-server: test-extension-secret
 
-  #    clientId: clientSecret

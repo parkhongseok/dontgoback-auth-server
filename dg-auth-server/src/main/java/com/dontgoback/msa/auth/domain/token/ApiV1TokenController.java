@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
 @RestController
-@RequestMapping("/msa/auth")
+@RequestMapping("/msa/auth/api")
 @RequiredArgsConstructor
 public class ApiV1TokenController {
     private final TokenProvider tokenProvider;

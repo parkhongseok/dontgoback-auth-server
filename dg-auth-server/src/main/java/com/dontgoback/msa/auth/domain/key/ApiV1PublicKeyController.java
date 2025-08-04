@@ -14,7 +14,7 @@ import java.security.PublicKey;
 import java.util.Base64;
 
 @RestController
-@RequestMapping("/msa/auth")
+@RequestMapping("/msa/auth/api")
 @RequiredArgsConstructor
 public class ApiV1PublicKeyController {
 
