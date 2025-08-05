@@ -2,7 +2,6 @@ package com.dontgoback.msa.auth.config;
 
 import com.dontgoback.msa.auth.config.jwt.TokenProvider;
 import com.dontgoback.msa.auth.config.key.PemKeyLoader;
-import com.dontgoback.msa.auth.domain.testclients.ClientA;
 import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -24,7 +23,7 @@ public class AuthServerTest {
     private TestAuthProperties testProps;
 
     @Autowired
-    private ClientA clientA;
+    private TestClientA clientA;
 
     @Autowired
     private TestTokenVerifier verifier;

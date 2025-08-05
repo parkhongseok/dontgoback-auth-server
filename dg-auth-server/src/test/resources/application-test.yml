@@ -11,11 +11,7 @@ auth:
     public-key-path: ./test-keys/public.pem
 
 # 외부 요청 DTO
-  ClientA:
+ext-server:
+  client-1:
     id: dontgoback-server-1
     secret: test-secret-1
-
-    # 외부 요청 DTO
-  ClientB:
-    id: dontgoback-server-2
-    secret: test-secret-2
