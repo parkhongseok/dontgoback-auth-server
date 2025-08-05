@@ -4,7 +4,6 @@ Date: 2025-08-03
 Status: Accepted
 
 <br/>
-<br/>
 
 ## 맥락
 
@@ -19,7 +18,6 @@ API 요청 방식과 인증 구조를 명확히 정의해둘 필요가 있습니
 
 <br/>
 <br/>
-<br/>
 
 ## 결정
 
@@ -30,7 +28,7 @@ API 요청 방식과 인증 구조를 명확히 정의해둘 필요가 있습니
 | **Endpoint**    | `POST /msa/auth/token`                                           |
 | **RequestBody** | JSON 형태로 `clientId`, `clientSecret` 전달                      |
 | **인증 방식**   | `clientId`, `clientSecret`을 기반으로 등록된 클라이언트인지 검증 |
-| **응답 형태**   | 성공 시 `token`에 포함된 JSON 응답 반환                          |
+| **응답 형태**   | 성공 시 JWT 문자열을 그대로 반환 (`Content-Type: text/plain`)    |
 | **예외 처리**   | - 잘못된 `clientId` 또는 `secret`: `401 UNAUTHORIZED`            |
 |                 | - 내부 에러: `500 INTERNAL SERVER ERROR`                         |
 
@@ -48,32 +46,21 @@ Content-Type: application/json
 
 **예시 응답:**
 
-```json
-{
-  "resultCode": "S",
-  "message": "Success",
-  "data": {
-    "token": "qf1d7h7..."
-  }
-}
 ```
-
-<br/>
-<br/>
-
----
+eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+```
 
 <br/>
 <br/>
 
 ### 2. 공개키 제공 API
 
-| 항목          | 설명                                              |
-| ------------- | ------------------------------------------------- |
-| **Endpoint**  | `GET /msa/auth/public-key`                        |
-| **인증 방식** | 없음 (누구나 접근 가능)                           |
-| **응답 형태** | Base64 인코딩된 공개키(JSON 형태로 반환)          |
-| **예외 처리** | - 공개키 초기화 실패: `500 INTERNAL SERVER ERROR` |
+| 항목          | 설명                                                       |
+| ------------- | ---------------------------------------------------------- |
+| **Endpoint**  | `GET /msa/auth/public-key`                                 |
+| **인증 방식** | 없음 (누구나 접근 가능)                                    |
+| **응답 형태** | Base64 인코딩된 공개키 문자열 (`Content-Type: text/plain`) |
+| **예외 처리** | - 공개키 초기화 실패: `500 INTERNAL SERVER ERROR`          |
 
 **예시 요청:**
 
@@ -83,14 +70,8 @@ GET /msa/auth/public-key
 
 **예시 응답:**
 
-```json
-{
-  "resultCode": "S",
-  "message": "Success",
-  "data": {
-    "publicKey": "HIhq...GDdc"
-  }
-}
+```
+HIhqGDdcKCAQEArKIOt...restofkey...
 ```
 
 <br/>
