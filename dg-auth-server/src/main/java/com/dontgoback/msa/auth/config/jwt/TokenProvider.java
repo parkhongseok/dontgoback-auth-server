@@ -1,26 +1,24 @@
 package com.dontgoback.msa.auth.config.jwt;
 
-import com.dontgoback.msa.auth.config.client.ClientAuthProperties;
 import io.jsonwebtoken.*;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import com.dontgoback.msa.auth.config.key.PemKeyLoader;
+//import com.dontgoback.msa.auth.config.client.ClientProperties;
+//import org.springframework.security.core.userdetails.UserDetailsService;
 
-import java.time.Duration;
 import java.util.Date;
+import java.time.Duration;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class TokenProvider {
-    private final JwtProperties jwtProperties;
-    private final ClientAuthProperties clientAuthProperties;
-    private final UserDetailsService userDetailsService;
     private final PemKeyLoader pemKeyLoader;
+    private final JwtProperties jwtProperties;
+//    private final ClientProperties clientProperties;
+//    private final UserDetailsService userDetailsService;
 
     private final Duration EXPIRE_DURATION = Duration.ofMinutes(5); // 5분
 
@@ -41,7 +39,7 @@ public class TokenProvider {
                 .signWith(SignatureAlgorithm.RS256, pemKeyLoader.getPrivateKey())
                 .compact();
     }
-//
+
 //    public Claims parseAndValidate(String token){
 //        try {
 //            Claims claims = getClaims(token);
@@ -85,13 +83,8 @@ public class TokenProvider {
 //
 //    private boolean subjectMatches(Claims claims) {
 //        String clientId = claims.getSubject(); // subject에 clientId를 검증
-//        return clientAuthProperties.exists(clientId);
+//        return clientProperties.exists(clientId);
 //    }
-//
-//    private String getClientId(Claims claims){
-//        return claims.getSubject();
-//    }
-//
 //    private Claims getClaims(String token) {
 //        return Jwts.parserBuilder()
 //                .setSigningKey(pemKeyLoader.getPublicKey())

@@ -1,7 +1,7 @@
-package com.dontgoback.msa.auth.domain.key;
+package com.dontgoback.msa.auth.domain.publickey;
 
-import com.dontgoback.msa.auth.config.jwt.PemKeyLoader;
-import org.junit.jupiter.api.Test;
+import com.dontgoback.msa.auth.config.key.PemKeyLoader;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -9,12 +9,12 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.PublicKey;
 import java.util.Base64;
 
 import static org.mockito.BDDMockito.given;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -22,8 +22,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(ApiV1PublicKeyController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class ApiV1PublicKeyControllerTest {
-    private final String END_POINT =  "/msa/auth/api/public-key";
+
+    private static final String END_POINT = "/msa/auth/api/public-key";
 
     @Autowired
     private MockMvc mockMvc;
@@ -31,14 +33,23 @@ public class ApiV1PublicKeyControllerTest {
     @MockitoBean
     private PemKeyLoader pemKeyLoader;
 
+    private PublicKey mockPublicKey;
+    private String encodedKey;
+
+    @BeforeAll
+    void initKeys() throws Exception {
+        KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA");
+        gen.initialize(2048);
+        KeyPair pair = gen.generateKeyPair();
+        mockPublicKey = pair.getPublic();
+        encodedKey = Base64.getEncoder().encodeToString(mockPublicKey.getEncoded());
+    }
+
+    /* ---------- 성공 케이스 ---------- */
     @Test
+    @DisplayName("공개키 요청 시 200 OK 와 Base64 값 반환")
     void 공개키_정상_응답() throws Exception {
         // given
-        KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-        keyGen.initialize(2048);
-        PublicKey mockPublicKey = keyGen.generateKeyPair().getPublic();
-        String encodedKey = Base64.getEncoder().encodeToString(mockPublicKey.getEncoded());
-
         given(pemKeyLoader.getPublicKey()).willReturn(mockPublicKey);
 
         // when & then
@@ -47,7 +58,9 @@ public class ApiV1PublicKeyControllerTest {
                 .andExpect(content().string(encodedKey));
     }
 
+    /* ---------- 실패 케이스 ---------- */
     @Test
+    @DisplayName("공개키 미초기화 시 500 INTERNAL_SERVER_ERROR 반환")
     void 공개키_미초기화_응답() throws Exception {
         // given
         given(pemKeyLoader.getPublicKey()).willReturn(null);

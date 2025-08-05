@@ -1,100 +1,100 @@
 package com.dontgoback.msa.auth.domain.token;
 
-import com.dontgoback.msa.auth.config.client.ClientAuthProperties;
+import com.dontgoback.msa.auth.config.client.ClientProperties;
 import com.dontgoback.msa.auth.config.jwt.TokenProvider;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
 
+import java.util.stream.Stream;
+
 import static org.mockito.BDDMockito.given;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@ActiveProfiles("test")
-@AutoConfigureMockMvc(addFilters = false) // Spring Security 필터 제거
 @WebMvcTest(ApiV1TokenController.class)
-public class ApiV1TokenControllerTest {
-    private final String END_POINT =  "/msa/auth/api/token";
+@AutoConfigureMockMvc(addFilters = false)
+@ActiveProfiles("test")
+class ApiV1TokenControllerTest {
+
+    private static final String END_POINT = "/msa/auth/api/token";
+    private static final String UNAUTHORIZED_MSG =
+            "Unauthorized: invalid_client or secret mismatch";
 
     @Autowired
     private MockMvc mockMvc;
 
-    @MockitoBean
+    @MockBean
+    private ClientProperties clientProps;
+
+    @MockBean
     private TokenProvider tokenProvider;
 
-    @MockitoBean
-    private ClientAuthProperties clientAuthProperties;
+    /* ---------- 성공 케이스 ---------- */
+    @DisplayName("정상 토큰 발급")
+    @ParameterizedTest(name = "[{index}] {0} → 200 OK")
+    @MethodSource("successCases")
+    void issueToken_success(String clientId, String secret, String expectedToken) throws Exception {
 
-    private String createRequestBody(String clientId, String clientSecret) {
-        return """
-            {
-                "clientId": "%s",
-                "clientSecret": "%s"
-            }
-        """.formatted(clientId, clientSecret);
-    }
-
-    private void performTokenRequest(String clientId, String clientSecret, ResultMatcher expectedStatus, ResultMatcher expectedContent) throws Exception {
-        mockMvc.perform(post(END_POINT)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(createRequestBody(clientId, clientSecret))
-                        .with(csrf()))
-                .andExpect(expectedStatus)
-                .andExpect(expectedContent);
-    }
-
-    @Test
-    void 토큰_정상_발급_요청_성공() throws Exception {
-        String clientId = "dontgoback-core-server";
-        String clientSecret = "test-core-secret";
-        String expectedToken = "mocked-jwt-token";
-
-        given(clientAuthProperties.getSecretForClientId(clientId)).willReturn(clientSecret);
+        given(clientProps.getSecretForClientId(clientId)).willReturn(secret);
         given(tokenProvider.generateToken(clientId)).willReturn(expectedToken);
 
-        performTokenRequest(
-                clientId,
-                clientSecret,
-                status().isOk(),
-                content().string(expectedToken)
+        perform(clientId, secret, status().isOk(), content().string(expectedToken));
+    }
+
+    /* ---------- 실패 케이스 ---------- */
+    @DisplayName("실패 시나리오 (시크릿 불일치 또는 미등록 clientId)")
+    @ParameterizedTest(name = "[{index}] {0} → 401 Unauthorized")
+    @MethodSource("failureCases")
+    void issueToken_failure(String clientId, String secret) throws Exception {
+
+        // getSecretForClientId 콜백 설정 (null 또는 올바른 시크릿 반환하지만 secret 불일치)
+        given(clientProps.getSecretForClientId(clientId))
+                .willReturn("dont-care"); // null이어도, 달라도 무관
+
+        perform(clientId, secret, status().isUnauthorized(),
+                content().string(UNAUTHORIZED_MSG));
+    }
+
+    /* ---------- 데이터 프로바이더 ---------- */
+    private static Stream<org.junit.jupiter.params.provider.Arguments> successCases() {
+        return Stream.of(
+                org.junit.jupiter.params.provider.Arguments.of(
+                        "dontgoback-core-server", "core-secret", "mocked-token-A")
         );
     }
 
-    @Test
-    void 토큰_발급_실패_시크릿_불일치() throws Exception {
-        String clientId = "dontgoback-core-server";
-        String correctSecret = "test-core-secret";
-        String wrongSecret = "wrong-secret";
-
-        given(clientAuthProperties.getSecretForClientId(clientId)).willReturn(correctSecret);
-
-        performTokenRequest(
-                clientId,
-                wrongSecret,
-                status().isUnauthorized(),
-                content().string("invalid_client : Client secret does not match.")
+    private static Stream<org.junit.jupiter.params.provider.Arguments> failureCases() {
+        return Stream.of(
+                // 시크릿 불일치
+                org.junit.jupiter.params.provider.Arguments.of(
+                        "dontgoback-core-server", "wrong-secret"),
+                // 미등록 clientId
+                org.junit.jupiter.params.provider.Arguments.of(
+                        "unknown-client", "any-secret")
         );
     }
 
-    @Test
-    void 토큰_발급_실패_존재하지_않는_클라이언트() throws Exception {
-        String unknownClientId = "unknown-client";
-        String anySecret = "some-secret";
+    /* ---------- 공통 요청 헬퍼 ---------- */
+    private void perform(String clientId, String secret,
+                         ResultMatcher status, ResultMatcher content) throws Exception {
 
-        given(clientAuthProperties.getSecretForClientId(unknownClientId)).willReturn(null);
+        String body = """
+                { "clientId": "%s", "clientSecret": "%s" }
+                """.formatted(clientId, secret);
 
-        performTokenRequest(
-                unknownClientId,
-                anySecret,
-                status().isUnauthorized(),
-                content().string("invalid_client : Client secret does not match.")
-        );
+        mockMvc.perform(post(END_POINT)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status)
+                .andExpect(content);
     }
 }

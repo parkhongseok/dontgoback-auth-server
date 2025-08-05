@@ -1,4 +1,4 @@
-package com.dontgoback.msa.auth.config.jwt;
+package com.dontgoback.msa.auth.domain.testclients;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -7,8 +7,7 @@ import org.springframework.stereotype.Component;
 
 @Getter
 @Setter
-@Component
-@ConfigurationProperties("auth.jwt")
-public class JwtProperties {
-    private String issuer;
+public class ClientA {
+    private final String id = "dontgoback-server-1";
+    private final String secret = "test-secret-1";
 }

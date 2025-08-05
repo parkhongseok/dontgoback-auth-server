@@ -1,8 +1,6 @@
-package com.dontgoback.msa.auth.domain.key;
+package com.dontgoback.msa.auth.domain.publickey;
 
-import com.dontgoback.msa.auth.config.jwt.PemKeyLoader;
-import com.dontgoback.msa.auth.domain.key.dto.PublicKeyResponse;
-import com.dontgoback.msa.auth.global.responseDto.ResData;
+import com.dontgoback.msa.auth.config.key.PemKeyLoader;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

@@ -9,9 +9,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Component
-@ConfigurationProperties(prefix = "auth")
+@ConfigurationProperties("auth")
 @Getter
-public class ClientAuthProperties {
+@Setter
+public class ClientProperties {
     private final Map<String, String> clients = new HashMap<>();
 
     public String getSecretForClientId(String clientId) {

@@ -1,0 +1,21 @@
+auth:
+  clients:
+    dontgoback-server-1: test-secret-1
+    dontgoback-server-2: test-secret-2
+
+  jwt:
+    issuer: dontgoback-auth-server
+
+  key:
+    private-key-path: ./test-keys/private.pem
+    public-key-path: ./test-keys/public.pem
+
+# 외부 요청 DTO
+  ClientA:
+    id: dontgoback-server-1
+    secret: test-secret-1
+
+    # 외부 요청 DTO
+  ClientB:
+    id: dontgoback-server-2
+    secret: test-secret-2
