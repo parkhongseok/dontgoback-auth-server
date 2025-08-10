@@ -1,5 +1,7 @@
 # dontgoback-auth-server
 
+![msa-system-architecture-overview](/docs/architecture/src/msa-system-architecture-overview.png)
+
 # 1. 프로젝트 개요
 
 ### 소개
@@ -49,6 +51,8 @@ Docker + GitHub Actions 기반 CI/CD 자동화도 함께 구축하고 있습니�
 
 # 2. 주요 기능
 
+![msa-system-architecture](/docs/architecture/src/msa-system-architecture.png)
+
 ### ① 비대칭키 기반 JWT 발급
 
 - `POST /msa/auth/token`
@@ -59,8 +63,9 @@ Docker + GitHub Actions 기반 CI/CD 자동화도 함께 구축하고 있습니�
 
 ### ② JWT 검증용 공개키 제공
 
-- `/msa/auth/public-key` 엔드포이트에서 **Base64 인코딩된 공개키**를 제공합니다.
-- 타 서버는 이 키로 JWT 서명을 검증할 수 있습니다.
+- `/msa/auth/public-key`
+- 응답은 `Content-Type: text/plain` 으로 **Base64 인코딩된 공개키**를 제공
+- 타 서버는 이 키로 JWT 서명을 검증
 
 <br/>
 
@@ -106,8 +111,6 @@ Docker + GitHub Actions 기반 CI/CD 자동화도 함께 구축하고 있습니�
 <br/>
 
 본 프로젝트의 아키텍처 결정 기록은 [`docs/architecture/decisions`](./docs/architecture/decisions) 디렉터리에 정리되어 있습니다.
-
-ADR은 각 결정의 **맥락**, **결정**, **결과** 를 중심으로 작성되어 서비스 구조에 대한 명확한 의사결정 환경을 제공합니다.
 
 <br/>
 <br/>
