@@ -1,0 +1,6 @@
+.git
+build
+.gradle
+**/*.log
+.env
+test-keys
