@@ -3,12 +3,16 @@ package com.dontgoback.msa.auth.domain.token;
 import com.dontgoback.msa.auth.config.client.ClientProperties;
 import com.dontgoback.msa.auth.config.jwt.TokenProvider;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -22,6 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(ApiV1TokenController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@Import(ApiV1TokenControllerTest.TestConfig.class)
 @ActiveProfiles("test")
 class ApiV1TokenControllerTest {
 
@@ -32,12 +37,23 @@ class ApiV1TokenControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @Autowired
     private ClientProperties clientProps;
 
-    @MockBean
+    @Autowired
     private TokenProvider tokenProvider;
 
+    @TestConfiguration
+    static class TestConfig {
+        @Bean
+        public ClientProperties clientProperties() {
+            return Mockito.mock(ClientProperties.class);
+        }
+        @Bean
+        public TokenProvider tokenProvider() {
+            return Mockito.mock(TokenProvider.class);
+        }
+    }
     /* ---------- 성공 케이스 ---------- */
     @DisplayName("정상 토큰 발급")
     @ParameterizedTest(name = "[{index}] {0} → 200 OK")
@@ -65,14 +81,14 @@ class ApiV1TokenControllerTest {
     }
 
     /* ---------- 데이터 프로바이더 ---------- */
-    private static Stream<org.junit.jupiter.params.provider.Arguments> successCases() {
+    private static Stream<Arguments> successCases() {
         return Stream.of(
-                org.junit.jupiter.params.provider.Arguments.of(
+                Arguments.of(
                         "dontgoback-core-server", "core-secret", "mocked-token-A")
         );
     }
 
-    private static Stream<org.junit.jupiter.params.provider.Arguments> failureCases() {
+    private static Stream<Arguments> failureCases() {
         return Stream.of(
                 // 시크릿 불일치
                 org.junit.jupiter.params.provider.Arguments.of(
