@@ -50,10 +50,11 @@ jobs:
           ssh-private-key: ${{ secrets.RPI_SSH_KEY }}
 
       # 5-1) [디버깅용] 호스트 주소가 올바르게 해석되는지 확인
+      # 하지만 실패해도, 빌드를 멈추지 않도록,
       - name: Debug DNS Resolution
         run: |
           echo "Attempting to resolve ${{ secrets.RPI_HOST }}"
-          nslookup ${{ secrets.RPI_HOST }}
+          nslookup ${{ secrets.RPI_HOST }} || true
 
       # 6) 대상 호스트의 공개키를 known_hosts에 추가 (MITM 방지)
       - name: Add Raspberry Pi host key
@@ -88,7 +89,7 @@ jobs:
 
       # 8) 배포 검증 - HTTP 200 + 본문이 Base64 형식인지 체크 (간단한 스모크 테스트)
       - name: Smoke test (public key)
-        if: always()
+        if: success()
         env:
           RPI_USER: ${{ secrets.RPI_USER }}
           RPI_HOST: ${{ secrets.RPI_HOST }}
@@ -103,18 +104,18 @@ jobs:
               status=$(curl -o /tmp/pk -s -w '%{http_code}' http://localhost:8091/msa/auth/api/public-key || true)
 
               if [ "$status" -eq 200 ]; then
-                echo "✅ Service is up (status: 200). Verifying content..."
+                echo "Service is up (status: 200). Verifying content..."
                 if grep -Eq '^[A-Za-z0-9+/=]+$' /tmp/pk; then
-                  echo "✅ Smoke test PASSED. Public key content is valid."
+                  echo "Smoke test PASSED. Public key content is valid."
                   exit 0
                 fi
-                echo "❌ FAIL: Content is not a valid Base64 string."
+                echo "FAIL: Content is not a valid Base64 string."
                 exit 1
               fi
               echo "Attempt $i/12 failed with status '$status'. Retrying in 5 seconds..."
               sleep 5
             done
-            echo "❌ FAIL: Service did not become ready in time."
+            echo "FAIL: Service did not become ready in time."
             exit 1
           EOSSH
 
