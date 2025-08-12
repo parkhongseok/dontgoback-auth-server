@@ -25,7 +25,7 @@ API 요청 방식과 인증 구조를 명확히 정의해둘 필요가 있습니
 
 | 항목            | 설명                                                             |
 | --------------- | ---------------------------------------------------------------- |
-| **Endpoint**    | `POST /msa/auth/token`                                           |
+| **Endpoint**    | `POST /msa/auth/api/token`                                       |
 | **RequestBody** | JSON 형태로 `clientId`, `clientSecret` 전달                      |
 | **인증 방식**   | `clientId`, `clientSecret`을 기반으로 등록된 클라이언트인지 검증 |
 | **응답 형태**   | 성공 시 JWT 문자열을 그대로 반환 (`Content-Type: text/plain`)    |
@@ -35,7 +35,7 @@ API 요청 방식과 인증 구조를 명확히 정의해둘 필요가 있습니
 **예시 요청:**
 
 ```http
-POST /msa/auth/token
+POST /msa/auth/api/token
 Content-Type: application/json
 
 {
@@ -57,7 +57,7 @@ eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
 
 | 항목          | 설명                                                       |
 | ------------- | ---------------------------------------------------------- |
-| **Endpoint**  | `GET /msa/auth/public-key`                                 |
+| **Endpoint**  | `GET /msa/auth/api/public-key`                             |
 | **인증 방식** | 없음 (누구나 접근 가능)                                    |
 | **응답 형태** | Base64 인코딩된 공개키 문자열 (`Content-Type: text/plain`) |
 | **예외 처리** | - 공개키 초기화 실패: `500 INTERNAL SERVER ERROR`          |
@@ -65,7 +65,7 @@ eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
 **예시 요청:**
 
 ```http
-GET /msa/auth/public-key
+GET /msa/auth/api/public-key
 ```
 
 **예시 응답:**

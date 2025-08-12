@@ -1,0 +1,150 @@
+name: Deploy Auth Server
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+# 배포 동시 실행 방지(경합 회피)를 위한 직렬화
+concurrency:
+  group: auth-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    if: github.event_name != 'workflow_dispatch' && contains(github.event.head_commit.message, '[deploy]') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    env:
+      IMAGE_NAME: auth-server
+      TARGET_PLATFORM: linux/arm64
+
+    steps:
+      # 1) 소스 체크아웃
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2) QEMU + Buildx (크로스 빌드용)
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 3) Buildx 캐시(도커 레이어) - GitHub Actions 캐시만 사용
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ env.TARGET_PLATFORM }}
+          tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # 5) 원격 접속용 SSH 키 등록 (비밀키는 GitHub Secrets에서 주입)
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.RPI_SSH_KEY }}
+
+      # 6) 대상 호스트의 공개키를 known_hosts에 추가 (MITM 방지)
+      - name: Add Raspberry Pi host key
+        # ssh-keyscan 대신 사전에 등록된 호스트 키를 사용하여 보안 강화
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.RPI_HOST_KEY }}" >> ~/.ssh/known_hosts
+
+      # 7) 이미지 스트리밍 전송 + 태깅 + compose 교체 기동
+      #    - docker save | ssh docker load : 레지스트리 없이 원격에 이미지 전송
+      #    - :current 태그로 교체 후 해당 서비스만 재기동 (--force-recreate 로 컨테이너 재생성 보장)
+      - name: Deploy to Raspberry Pi
+        env:
+          RPI_HOST: ${{ secrets.RPI_HOST }}
+          RPI_USER: ${{ secrets.RPI_USER }}
+          RPI_SSH_PORT: ${{ secrets.RPI_SSH_PORT }} # 예: 22
+          GITHUB_SHA: ${{ github.sha }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+        run: |
+          set -e
+          # 로컬에서 빌드된 이미지를 원격으로 스트리밍 전송 후 로드
+          docker save ${IMAGE_NAME}:${GITHUB_SHA} \
+          | ssh -p ${RPI_SSH_PORT} ${RPI_USER}@${RPI_HOST} 'docker load'
+
+          # 원격 서버에서 :current 로 태깅하고 auth 서비스만 교체 기동
+          ssh -p ${RPI_SSH_PORT} ${RPI_USER}@${RPI_HOST} <<EOSSH
+          set -e
+          docker tag ${IMAGE_NAME}:${GITHUB_SHA} ${IMAGE_NAME}:current
+          cd /home/phs/dgb/compose
+          docker compose up -d --force-recreate --no-deps auth
+          EOSSH
+
+      # 8) 배포 검증 - HTTP 200 + 본문이 Base64 형식인지 체크 (간단한 스모크 테스트)
+      - name: Smoke test (public key)
+        if: always()
+        env:
+          RPI_USER: ${{ secrets.RPI_USER }}
+          RPI_HOST: ${{ secrets.RPI_HOST }}
+          RPI_SSH_PORT: ${{ secrets.RPI_SSH_PORT }}
+        run: |
+          ssh -p ${RPI_SSH_PORT} ${RPI_USER}@${RPI_HOST} \
+            "status=\$(curl -o /tmp/pk -s -w '%{http_code}' http://localhost:8091/msa/auth/api/public-key); \
+             test \"\$status\" = 200 && grep -Eq '^[A-Za-z0-9+/=]+$' /tmp/pk && echo OK || (echo FAIL && exit 1)"
+
+      # 실패 시 원격 로그 수집
+      # - 조건: 이전 단계 중 하나라도 실패하면 실행 (failure())
+      # - 내용: compose 상태, 최근 컨테이너 로그 200줄 수집
+      # - 목적: 실패 원인 파악 시간 단축 (네트워크, 이미지, 애플리케이션 오류 등)
+      - name: Collect remote logs on failure
+        if: failure()
+        env:
+          RPI_USER: ${{ secrets.RPI_USER }}
+          RPI_HOST: ${{ secrets.RPI_HOST }}
+          RPI_SSH_PORT: ${{ secrets.RPI_SSH_PORT }}
+        run: |
+          ssh -p ${RPI_SSH_PORT} ${RPI_USER}@${RPI_HOST} '
+            set +e
+            echo "===== [compose ps] 현재 서비스 상태 ====="
+            cd /home/phs/dgb/compose && docker compose ps
+            echo
+            echo "===== [compose logs] auth 최근 200줄 ====="
+            docker compose logs --tail=200 auth || true
+            echo
+            echo "===== [docker ps -a] 최근 컨테이너 목록 ====="
+            docker ps -a --format "table {{.ID}}\t{{.Image}}\t{{.Status}}\t{{.Names}}" | head -n 20 || true
+            echo
+            echo "===== [system df] 도커 디스크 사용량 ====="
+            docker system df || true
+          '
+
+      # 원격 디스크 청소 (보수적 설정)
+      # - 조건: 항상 실행 (성공/실패 무관). 배포 실패 후에도 다음 배포 공간 확보를 위해 수행.
+      # - 정책:
+      #   1) Dangling 레이어 정리: 태그/참조가 끊긴 레이어만 제거 → 안전
+      #   2) 7일(168h)보다 오래된 "미사용(unused) 이미지" 제거: 현재 컨테이너가 쓰지 않는 이미지만 대상으로 하여 비교적 안전
+      # - 참고: :current 태그와 실행 중 컨테이너가 사용하는 이미지는 제거되지 않음
+      - name: Remote disk cleanup (Docker images)
+        if: always()
+        env:
+          RPI_USER: ${{ secrets.RPI_USER }}
+          RPI_HOST: ${{ secrets.RPI_HOST }}
+          RPI_SSH_PORT: ${{ secrets.RPI_SSH_PORT }}
+        run: |
+          ssh -p ${RPI_SSH_PORT} ${RPI_USER}@${RPI_HOST} <<'EOSSH'
+          set -e
+          echo "===== [BEFORE] docker system df (청소 전) ====="
+          docker system df || true
+          echo
+
+          echo "----- Dangling 레이어 정리 (태그 끊긴 레이어) -----"
+          docker image prune -f || true
+          echo
+
+          echo "----- 7일 이상 미사용(unused) 이미지 정리 -----"
+          # 주의: 현재 컨테이너에서 사용 중인 이미지는 제거되지 않으며, 최근 일주일 내 pull/빌드된 이미지는 보존
+          docker image prune -a -f --filter "until=168h" || true
+          echo
+
+          echo "===== [AFTER] docker system df (청소 후) ====="
+          docker system df || true
+          EOSSH
