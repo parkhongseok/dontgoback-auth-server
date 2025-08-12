@@ -87,37 +87,50 @@ jobs:
           docker compose -f /home/phs/dgb/compose/docker-compose.yml up -d --force-recreate --no-deps auth
           EOSSH
 
-      # 8) 배포 검증 - HTTP 200 + 본문이 Base64 형식인지 체크 (간단한 스모크 테스트)
-      - name: Smoke test (public key)
+      - name: Smoke test (auth public key on localhost)
         if: success()
         env:
           RPI_USER: ${{ secrets.RPI_USER }}
           RPI_HOST: ${{ secrets.RPI_HOST }}
           RPI_SSH_PORT: ${{ secrets.RPI_SSH_PORT }}
         run: |
-          # 애플리케이션이 완전히 시작될 때까지 대기하며 재시도 (최대 60초)
-          ssh -p ${RPI_SSH_PORT} ${RPI_USER}@${RPI_HOST} <<'EOSSH'
-            set -e
-            echo "--- Starting smoke test with retry (timeout: 60s) ---"
-            for i in {1..12}; do
-              # curl 실패(e.g. Connection Refused) 시 스크립트가 중단되지 않도록 `|| true` 추가
-              status=$(curl -o /tmp/pk -s -w '%{http_code}' http://localhost:8091/msa/auth/api/public-key || true)
+          set -e
+          ssh -p "${RPI_SSH_PORT}" "${RPI_USER}@${RPI_HOST}" 'bash -seuo pipefail' <<'EOSSH'
+            echo "--- Smoke test (localhost:8091) ---"
+            # 최대 60초 동안 재시도: 12회 x 5초
+            curl -fsS \
+              --retry 12 --retry-all-errors --retry-delay 5 \
+              --connect-timeout 3 --max-time 10 \
+              -o /tmp/pk http://localhost:8091/msa/auth/api/public-key
 
-              if [ "$status" -eq 200 ]; then
-                echo "Service is up (status: 200). Verifying content..."
-                if grep -Eq '^[A-Za-z0-9+/=]+$' /tmp/pk; then
-                  echo "Smoke test PASSED. Public key content is valid."
-                  exit 0
-                fi
-                echo "FAIL: Content is not a valid Base64 string."
-                exit 1
-              fi
-              echo "Attempt $i/12 failed with status '$status'. Retrying in 5 seconds..."
-              sleep 5
-            done
-            echo "FAIL: Service did not become ready in time."
-            exit 1
+            # 1) 비어있지 않은지
+            test -s /tmp/pk
+
+            # 2) Base64 형식 + 실제 디코딩 검증
+            grep -Eq '^[A-Za-z0-9+/=]+$' /tmp/pk
+            base64 -d /tmp/pk >/dev/null 2>&1
+
+            echo "PASS: auth public key is reachable and valid (localhost)."
           EOSSH
+          rc=$?
+          echo "SSH exit code: $rc"
+          exit $rc
+
+      - name: Smoke test (auth public key via HTTPS)
+        if: success()
+        run: |
+          set -euo pipefail
+          echo "--- Smoke test (https://auth.dontgoback.kro.kr) ---"
+          curl -fsS \
+            --retry 12 --retry-all-errors --retry-delay 5 \
+            --connect-timeout 3 --max-time 10 \
+            -o /tmp/pk_ext https://auth.dontgoback.kro.kr/msa/auth/api/public-key
+
+          test -s /tmp/pk_ext
+          grep -Eq '^[A-Za-z0-9+/=]+$' /tmp/pk_ext
+          base64 -d /tmp/pk_ext >/dev/null 2>&1
+
+          echo "PASS: auth public key is reachable and valid (HTTPS)."
 
       # 실패 시 원격 로그 수집
       # - 조건: 이전 단계 중 하나라도 실패하면 실행 (failure())
