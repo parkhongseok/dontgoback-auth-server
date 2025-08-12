@@ -49,6 +49,12 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.RPI_SSH_KEY }}
 
+      # 5-1) [디버깅용] 호스트 주소가 올바르게 해석되는지 확인
+      - name: Debug DNS Resolution
+        run: |
+          echo "Attempting to resolve ${{ secrets.RPI_HOST }}"
+          nslookup ${{ secrets.RPI_HOST }}
+
       # 6) 대상 호스트의 공개키를 known_hosts에 추가 (MITM 방지)
       - name: Add Raspberry Pi host key
         # ssh-keyscan 대신 사전에 등록된 호스트 키를 사용하여 보안 강화

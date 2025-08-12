@@ -55,7 +55,7 @@ Docker + GitHub Actions 기반 CI/CD 자동화도 함께 구축하고 있습니�
 
 ### ① 비대칭키 기반 JWT 발급
 
-- `POST /msa/auth/token`
+- `POST /msa/auth/api/token`
 - 등록된 `clientId`, `clientSecret` 검증 후 **개인키로 서명된 JWT** 발급
 - 응답은 `Content-Type: text/plain` 으로 **JWT 문자열 그대로 반환**
 
@@ -63,7 +63,7 @@ Docker + GitHub Actions 기반 CI/CD 자동화도 함께 구축하고 있습니�
 
 ### ② JWT 검증용 공개키 제공
 
-- `/msa/auth/public-key`
+- `/msa/auth/api/public-key`
 - 응답은 `Content-Type: text/plain` 으로 **Base64 인코딩된 공개키**를 제공
 - 타 서버는 이 키로 JWT 서명을 검증
 
