@@ -2,11 +2,14 @@ package com.dontgoback.msa.auth.domain.publickey;
 
 import com.dontgoback.msa.auth.config.key.PemKeyLoader;
 import org.junit.jupiter.api.*;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.security.KeyPair;
@@ -21,6 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(ApiV1PublicKeyController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@Import(ApiV1PublicKeyControllerTest.TestConfig.class)
 @ActiveProfiles("test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class ApiV1PublicKeyControllerTest {
@@ -30,11 +34,17 @@ public class ApiV1PublicKeyControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockitoBean
+    @Autowired
     private PemKeyLoader pemKeyLoader;
 
     private PublicKey mockPublicKey;
     private String encodedKey;
+
+    @TestConfiguration
+    static class TestConfig {
+        @Bean
+        public PemKeyLoader pemKeyLoader() { return Mockito.mock(PemKeyLoader.class); }
+    }
 
     @BeforeAll
     void initKeys() throws Exception {
