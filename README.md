@@ -101,16 +101,43 @@ Docker + GitHub Actions 기반 CI/CD 자동화도 함께 구축하고 있습니�
 
 # 3. 아키텍처
 
-### 목차
+## 3-1. 시스템 아키텍처
 
-- 01.MSA 대응을 위한 비대칭키 인증 전략
-- 02.API 명세: 토큰 발급 & 공개키 제공
-- 03.인증 서버 테스트 전략 (단위 + 통합 테스트 포함)
+![msa-system-architecture-overview](./docs/architecture/src/msa-system-architecture-overview.png)
+
+1. **dg-core-server** : 기존 기능(도메인 기능) 수행, 내부 서버 오케스트르레이션
+2. **dg-auth-server** : S256 기반 JWT 발급·공개키 제공
+3. **dg-extension-server** : 공개키로 검증 후 확장 API(유저 자산 갱신 등)를 제공
+
+## 3-2. 네트워크 아키텍처
+
+![msa-network-architecture](./docs/architecture/src/05-라즈베리파이-인프라-구축과-트러블슈팅.png)
+
+가정용 공유기 환경의 라즈베리파이를 외부 공개 서버로 구축한 아키텍처입니다.
+
+- DDNS와 개인 도메인의 CNAME 레코드를 조합하여 유동적인 공인 IP 문제를 해결하고, DHCP 예약으로 내부 IP를 고정했습니다.
+
+- 외부 요청은 포트포워딩을 통해 내부 서버로 전달되며, Let's Encrypt 인증서와 UFW 방화벽을 통해 HTTPS 기반의 이중 보안 계층을 확보했습니다.
+
+<br/>
+
+## 3-3. 빌드 및 배포 자동화 아키텍처
+
+![msa-build-deploy-architecture](./docs/architecture/src/06-라즈베리파이-MSA-서버-빌드-및-배포-자동화.png)
+
+- `git push`를 통해 MSA 애플리케이션을 라즈베리파이에 자동 배포하는 GitHub Actions 기반의 CI/CD 아키텍처입니다.
+
+- 외부 컨테이너 레지스트리 없이, **SSH 스트리밍**으로 Docker 이미지를 서버에 직접 전송하여 배포 속도와 단순성을 확보했습니다.
+
+- **ARM64 크로스 빌드**를 지원하며, GitHub Actions 캐시를 활용해 빌드 시간을 90% 이상 단축시켰습니다.  
+  (최대 501초에서 6초로 단축)
+
+- 또한, 배포 후 **자동 검증(Smoke Test)** 과 실패 시 로그 수집 기능으로 운영 안정성을 높였습니다.
 
 <br/>
 <br/>
 
-본 프로젝트의 아키텍처 결정 기록은 [`docs/architecture/decisions`](./docs/architecture/decisions) 디렉터리에 정리되어 있습니다.
+더 자세한 기록은 [`docs/architecture/decisions`](./docs/architecture/decisions) 디렉터리에 정리되어 있습니다.
 
 <br/>
 <br/>
