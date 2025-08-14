@@ -1,4 +1,4 @@
-# dontgoback-auth-server
+# MSA 인증 서버 : `dontgoback-auth-server`
 
 ![msa-system-architecture-overview](/docs/architecture/src/msa-system-architecture-overview.png)
 
@@ -16,9 +16,8 @@ Core 서버 및 기타 확장 서버들과의 신뢰 기반 통신을 위하여 
 
 - 확장 서버들에서는 **공개키(public key)** 만을 안전하게 제공하여 타 서비스가 JWT의 유효성을 검증할 수 있도록 합니다.
 
-개발 및 배포는 **경량화된 인프라(Raspberry Pi)**를 기반으로 하며,
-단위테스트와 통합 테스트를 실행하고,
-Docker + GitHub Actions 기반 CI/CD 자동화도 함께 구축하고 있습니다.
+개발 및 배포는 **경량화된 인프라(Raspberry Pi)** 환경를 기반으로 하며, 단위테스트와 통합 테스트를 실행하고,  
+Docker + GitHub Actions 기반 CI/CD 파이프라인을 구축하였습니다.
 
 ### 기간
 
@@ -41,19 +40,21 @@ Docker + GitHub Actions 기반 CI/CD 자동화도 함께 구축하고 있습니�
 
 ### 연관 프로젝트
 
-- 중심 서비스 서버 GitHub 주소:
-  [https://github.com/parkhongseok/projectDontGoBack](https://github.com/parkhongseok/projectDontGoBack)
+- 코어 서버 GitHub 주소:
+  [https://github.com/core](https://github.com/parkhongseok/projectDontGoBack)
 
-- 확장 서비스 서버 GitHub 주소:
-  [https://github.com/parkhongseok/dontgoback-extension-server](https://github.com/parkhongseok/dontgoback-extension-server)
+- 확장 서버 GitHub 주소:
+  [https://github.com/ext](https://github.com/parkhongseok/dontgoback-extension-server)
 
-<br/><br/><br/>
+<br/>
+<br/>
+<br/>
 
 # 2. 주요 기능
 
 ![msa-system-architecture](/docs/architecture/src/msa-system-architecture.png)
 
-### ① 비대칭키 기반 JWT 발급
+### ① 비대칭키 기반 JWT 발급 API
 
 - `POST /msa/auth/api/token`
 - 등록된 `clientId`, `clientSecret` 검증 후 **개인키로 서명된 JWT** 발급
@@ -61,7 +62,7 @@ Docker + GitHub Actions 기반 CI/CD 자동화도 함께 구축하고 있습니�
 
 <br/>
 
-### ② JWT 검증용 공개키 제공
+### ② JWT 검증용 공개키 제공 API
 
 - `/msa/auth/api/public-key`
 - 응답은 `Content-Type: text/plain` 으로 **Base64 인코딩된 공개키**를 제공
@@ -92,10 +93,13 @@ Docker + GitHub Actions 기반 CI/CD 자동화도 함께 구축하고 있습니�
 
 <br/>
 
-### ④ 빌드 및 배포 자동화 (진행 중)
+### ④ 빌드 및 배포 자동화
 
-- Docker 기반 컨테이너화 예정
-- GitHub Actions 기반 CI/CD 자동화 구축 중
+- Docker 기반 컨테이너화
+- GitHub Actions 기반 CI/CD 자동화
+- 빌드 캐시 통한 배포 시간 **501초에서 6초로 단축**
+
+<br/>
 
 <br/><br/><br/>
 
@@ -109,6 +113,9 @@ Docker + GitHub Actions 기반 CI/CD 자동화도 함께 구축하고 있습니�
 2. **dg-auth-server** : S256 기반 JWT 발급·공개키 제공
 3. **dg-extension-server** : 공개키로 검증 후 확장 API(유저 자산 갱신 등)를 제공
 
+<br/>
+<br/>
+
 ## 3-2. 네트워크 아키텍처
 
 ![msa-network-architecture](./docs/architecture/src/05-라즈베리파이-인프라-구축과-트러블슈팅.png)
@@ -119,6 +126,7 @@ Docker + GitHub Actions 기반 CI/CD 자동화도 함께 구축하고 있습니�
 
 - 외부 요청은 포트포워딩을 통해 내부 서버로 전달되며, Let's Encrypt 인증서와 UFW 방화벽을 통해 HTTPS 기반의 이중 보안 계층을 확보했습니다.
 
+<br/>
 <br/>
 
 ## 3-3. 빌드 및 배포 자동화 아키텍처
@@ -137,7 +145,7 @@ Docker + GitHub Actions 기반 CI/CD 자동화도 함께 구축하고 있습니�
 <br/>
 <br/>
 
-더 자세한 기록은 [`docs/architecture/decisions`](./docs/architecture/decisions) 디렉터리에 정리되어 있습니다.
+더 자세한 기록은 [`docs/architecture/decisions`](./docs/architecture/decisions) 디렉터리에서 확인하실 수 있습니다.
 
 <br/>
 <br/>
