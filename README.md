@@ -60,7 +60,7 @@
 ### MSA 내에서의 역할
 
 <p align="center">
-  <img src="./docs/architecture/src/msa-system-architecture-overview.png" width="55%" alt="MSA 시스템 아키텍처 요약">
+  <img src="./docs/architecture/src/msa-system-architecture-overview.png" width="75%" alt="MSA 시스템 아키텍처 요약">
 </p>
 
 - Core 서버 및 Extension 서버로부터 토큰 발급 요청을 받고, 다른 모든 서버에 공개키를 제공하는 중앙 인증 허브 역할을 수행합니다.
@@ -71,7 +71,7 @@
 ## 배포 자동화 (CI/CD on Raspberry Pi)
 
 <p align="center">
-  <img src="./docs/architecture/src/06-라즈베리파이-MSA-서버-빌드-및-배포-자동화.png" width="80%" alt="MSA 서버 아키텍처 통합">
+  <img src="./docs/architecture/src/06-라즈베리파이-MSA-서버-빌드-및-배포-자동화.png" width="95%" alt="MSA 서버 아키텍처 통합">
 </p>
 
 - GitHub Actions를 통해 **ARM64 아키텍처의 라즈베리파이에 맞게 크로스 빌드** 됩니다.
