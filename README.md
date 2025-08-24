@@ -1,151 +1,79 @@
-# MSA 인증 서버 : `dontgoback-auth-server`
-
-![msa-system-architecture-overview](/docs/architecture/src/msa-system-architecture-overview.png)
-
-# 1. 프로젝트 개요
-
-### 소개
-
-`dontgoback-auth-server`는 **서버 간 통신을 위한 인증 토큰 발급**과  
-**JWT 검증용 공개키 제공**을 담당하는 마이크로서비스 인증 서버입니다.
-
-이 프로젝트는 `DontGoBack` 마이크로서비스 아키텍처(MSA) 환경에서 공통 인증 인프라의 역할을 하며,  
-Core 서버 및 기타 확장 서버들과의 신뢰 기반 통신을 위하여 **비대칭키(RS256) 기반**의 **JWT 발급 시스템**을 구현하였습니다.
-
-- 인증 서버는 **개인키(private key)** 로 JWT를 서명하고,
-
-- 확장 서버들에서는 **공개키(public key)** 만을 안전하게 제공하여 타 서비스가 JWT의 유효성을 검증할 수 있도록 합니다.
-
-개발 및 배포는 **경량화된 인프라(Raspberry Pi)** 환경를 기반으로 하며, 단위테스트와 통합 테스트를 실행하고,  
-Docker + GitHub Actions 기반 CI/CD 파이프라인을 구축하였습니다.
-
-### 기간
-
-- 2025.08.01 \~ (진행 중)
-
-### 인원
-
-- 개인 프로젝트
-
-### 기술 스탭
-
-|      번류      |            도구            |  버전  |
-| :------------: | :------------------------: | :----: |
-|      언어      |            Java            |   21   |
-|    Backend     |        Spring Boot         | 3.4.0  |
-|  인증/암호화   |        jjwt (RS256)        | 0.11.5 |
-|     테스트     | JUnit5 / Mockito / MockMvc |  최신  |
-| Infrastructure |        Raspberry Pi        |   -    |
-|     DevOps     |  GitHub Actions / Docker   |   -    |
-
-### 연관 프로젝트
-
-- 코어 서버 GitHub 주소:
-  [https://github.com/core](https://github.com/parkhongseok/projectDontGoBack)
-
-- 확장 서버 GitHub 주소:
-  [https://github.com/ext](https://github.com/parkhongseok/dontgoback-extension-server)
-
-<br/>
-<br/>
-<br/>
-
-# 2. 주요 기능
-
-![msa-system-architecture](/docs/architecture/src/msa-system-architecture.png)
-
-### ① 비대칭키 기반 JWT 발급 API
-
-- `POST /msa/auth/api/token`
-- 등록된 `clientId`, `clientSecret` 검증 후 **개인키로 서명된 JWT** 발급
-- 응답은 `Content-Type: text/plain` 으로 **JWT 문자열 그대로 반환**
+# dontgoback-auth-server
 
 <br/>
 
-### ② JWT 검증용 공개키 제공 API
-
-- `/msa/auth/api/public-key`
-- 응답은 `Content-Type: text/plain` 으로 **Base64 인코딩된 공개키**를 제공
-- 타 서버는 이 키로 JWT 서명을 검증
-
+<p align="center">
+"DontGoBack MSA 프로젝트의 모든 서비스 간 신뢰를 보장하는 OAuth 2.0 인증 서버"
+</p>
 <br/>
 
-### ③ 테스트 작성 및 검증
+> 이 프로젝트는 '돈고백(Dont Go Back)' MSA 프로젝트의 일부입니다.  
+> 전체 프로젝트의 개요 및 성과는 **[코어 서버 README](https://github.com/parkhongseok/projectDontGoBack)** 에서 확인하실 수 있습니다.
 
-단위 테스트 + 통합 테스트를 모두 구성하여 안전성과 신뢰도를 확보했습니다.
+</br>
 
-#### 1) 단위 테스트
+## 1. 핵심 역할
 
-- 테스트 시에는 Spring Security 필터를 제거하고,
-- **@WebMvcTest + @MockitoBean 조합**으로 단위 테스트 환경을 구성했습니다.
-  | 컨트롤러 | 테스트 항목 |
-  | -------------------------- | ---------------------------------------------------------------------- |
-  | `ApiV1TokenController` | 유효한 클라이언트 요청 → JWT 발급 및 BASE64 인코딩 → `text/plain` 응답 |
-  | | 잘못된 clientId or secret → 401 반환 |
-  | `ApiV1PublicKeyController` | 공개키 초기화 실패 → 500 오류 반환 |
-  | | 정상 요청 → 공개키 `text/plain` 응답 |
+이 서버는 MSA 환경의 단일 인증 지점(Single Point of Authentication)으로서, 다음과 같은 명확한 책임을 갖습니다.
 
-#### 2) 통합 테스트:
+- **OAuth 2.0 인증 서버 (Authorization Server):**
+  - `Client Credentials Grant` 흐름에 따라 등록된 클라이언트(서버)에 대한 인증을 수행합니다.
+- **비대칭키(RS256) 기반 JWT 서명:**
+  - **개인키(Private Key)를 유일하게 소유**하며, 이를 통해 안전한 JWT(Access Token)를 서명 및 발급합니다.
+- **JWT 검증용 공개키 제공 API:**
+  - 다른 서비스들이 토큰을 안전하게 검증할 수 있도록 **공개키(Public Key)를 외부에 제공**하는 역할을 담당합니다.
 
-- 실제 PemKeyLoader, TokenProvider, TestTokenVerifier 를 통한 JWT 생성–검증 전체 흐름 검증
+</br>
 
-  > 테스트 전용 .yml 프로파일 분리
+## 2. 주요 기술 구현
 
-<br/>
+#### 1. **OAuth 2.0 Token API (`/msa/auth/api/token`)**
 
-### ④ 빌드 및 배포 자동화
+- 요청으로 받은 `clientId`와 `clientSecret`을 검증합니다.
+- 검증 성공 시, JWT Claims를 생성하고 **RS256 알고리즘과 개인키로 서명**하여 토큰을 발급합니다.
 
-- Docker 기반 컨테이너화
-- GitHub Actions 기반 CI/CD 자동화
-- 빌드 캐시 통한 배포 시간 **501초에서 6초로 단축**
+#### 2. **Public Key API (`/msa/auth/api/public-key`)**
 
-<br/>
+- 서버 시작 시 `.pem` 파일에서 개인키/공개키를 로드합니다.
+- 요청 시, 외부에 노출되어도 안전한 **공개키를 Base64 인코딩된 텍스트** 형태로 제공합니다.
 
-<br/><br/><br/>
+#### 3. **견고한 테스트 전략 (Robust Testing Strategy)**
 
-# 3. 아키텍처
+- **Unit Test (`@WebMvcTest`):** Spring Security 필터를 비활성화하고, 각 Controller의 요청/응답 및 예외 처리를 Mockito를 활용하여 테스트하며 API 명세를 검증했습니다.
+- **Integration Test (`@SpringBootTest`):** 실제 토큰 발급부터, 발급된 토큰을 공개키로 검증하는 전체 인증 사이클이 정상 동작하는지 통합 테스트를 통해 시스템의 신뢰도를 확보했습니다.
 
-## 3-1. 시스템 아키텍처
+</br>
 
-![msa-system-architecture-overview](./docs/architecture/src/msa-system-architecture-overview.png)
+## 3. 기술 스택
 
-1. **dg-core-server** : 기존 기능(도메인 기능) 수행, 내부 서버 오케스트르레이션
-2. **dg-auth-server** : S256 기반 JWT 발급·공개키 제공
-3. **dg-extension-server** : 공개키로 검증 후 확장 API(유저 자산 갱신 등)를 제공
+| 구분               | 기술                                  |
+| :----------------- | :------------------------------------ |
+| **Backend**        | Java 21, Spring Boot, Spring Security |
+| **Authentication** | jjwt (JSON Web Token for Java)        |
+| **Testing**        | JUnit5, Mockito, MockMvc              |
+| **DevOps & Infra** | Docker, GitHub Actions, Raspberry Pi  |
+
+</br>
+
+## 4. 아키텍처
+
+### MSA 내에서의 역할
+
+<p align="center">
+  <img src="./docs/architecture/src/msa-system-architecture-overview.png" width="55%" alt="MSA 시스템 아키텍처 요약">
+</p>
+
+- Core 서버 및 Extension 서버로부터 토큰 발급 요청을 받고, 다른 모든 서버에 공개키를 제공하는 중앙 인증 허브 역할을 수행합니다.
 
 <br/>
 <br/>
 
-## 3-2. 네트워크 아키텍처
+## 배포 자동화 (CI/CD on Raspberry Pi)
 
-![msa-network-architecture](./docs/architecture/src/05-라즈베리파이-인프라-구축과-트러블슈팅.png)
+<p align="center">
+  <img src="./docs/architecture/src/06-라즈베리파이-MSA-서버-빌드-및-배포-자동화.png" width="80%" alt="MSA 서버 아키텍처 통합">
+</p>
 
-가정용 공유기 환경의 라즈베리파이를 외부 공개 서버로 구축한 아키텍처입니다.
-
-- DDNS와 개인 도메인의 CNAME 레코드를 조합하여 유동적인 공인 IP 문제를 해결하고, DHCP 예약으로 내부 IP를 고정했습니다.
-
-- 외부 요청은 포트포워딩을 통해 내부 서버로 전달되며, Let's Encrypt 인증서와 UFW 방화벽을 통해 HTTPS 기반의 이중 보안 계층을 확보했습니다.
-
-<br/>
-<br/>
-
-## 3-3. 빌드 및 배포 자동화 아키텍처
-
-![msa-build-deploy-architecture](./docs/architecture/src/06-라즈베리파이-MSA-서버-빌드-및-배포-자동화.png)
-
-- `git push`를 통해 MSA 애플리케이션을 라즈베리파이에 자동 배포하는 GitHub Actions 기반의 CI/CD 아키텍처입니다.
-
-- 외부 컨테이너 레지스트리 없이, **SSH 스트리밍**으로 Docker 이미지를 서버에 직접 전송하여 배포 속도와 단순성을 확보했습니다.
-
-- **ARM64 크로스 빌드**를 지원하며, GitHub Actions 캐시를 활용해 빌드 시간을 90% 이상 단축시켰습니다.  
-  (최대 501초에서 6초로 단축)
-
-- 또한, 배포 후 **자동 검증(Smoke Test)** 과 실패 시 로그 수집 기능으로 운영 안정성을 높였습니다.
-
-<br/>
-<br/>
-
-더 자세한 기록은 [`docs/architecture/decisions`](./docs/architecture/decisions) 디렉터리에서 확인하실 수 있습니다.
-
-<br/>
-<br/>
+- GitHub Actions를 통해 **ARM64 아키텍처의 라즈베리파이에 맞게 크로스 빌드** 됩니다.
+- 외부 컨테이너 레지스트리 없이, **SSH 스트리밍으로 Docker 이미지를 서버에 직접 전송**하여 배포 속도와 단순성을 확보했습니다.
+- 배포 후 **Smoke Test**를 통해 API가 정상 응답하는지 자동으로 검증합니다.
